@@ -1,0 +1,167 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Analysis with Gemini</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 900px;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        h1 {
+            color: #343a40;
+            margin-bottom: 20px;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        #analysisResult {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+            display: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .api-warning {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .report-actions {
+            margin-top: 20px;
+            text-align: right;
+        }
+        /* GitHub-like markdown styling */
+        .markdown-body {
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .markdown-body ul {
+            list-style-type: disc !important;
+        }
+        .markdown-body ol {
+            list-style-type: decimal !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">Text Analysis with Gemini AI</h1>
+        
+        {% if not api_configured %}
+        <div class="api-warning">
+            <strong>Warning:</strong> Gemini API key is not configured. Please set the GEMINI_API_KEY environment variable.
+        </div>
+        {% endif %}
+        
+        <form id="analysisForm">
+            <div class="mb-3">
+                <label for="textInput" class="form-label">Paste your text below for analysis:</label>
+                <textarea class="form-control" id="textInput" rows="10" placeholder="Enter or paste your text here..."></textarea>
+            </div>
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary" id="analyzeBtn">Analyze Text</button>
+            </div>
+        </form>
+        
+        <div class="loading" id="loadingSpinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Analyzing your text with Gemini AI...</p>
+        </div>
+        
+        <div id="analysisResult">
+            <div class="report-actions">
+                <form id="pdfForm" action="/download-pdf" method="post" target="_blank">
+                    <input type="hidden" id="htmlContent" name="html_content">
+                    <button type="submit" class="btn btn-success" id="downloadPdfBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf" viewBox="0 0 16 16">
+                            <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                            <path d="M4.603 14.087a.81.81 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.68 7.68 0 0 1 1.482-.645 19.697 19.697 0 0 0 1.062-2.227 7.269 7.269 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.188-.012.396-.047.614-.084.51-.27 1.134-.52 1.794a10.954 10.954 0 0 0 .98 1.686 5.753 5.753 0 0 1 1.334.05c.364.066.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.856.856 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.712 5.712 0 0 1-.911-.95 11.651 11.651 0 0 0-1.997.406 11.307 11.307 0 0 1-1.02 1.51c-.292.35-.609.656-.927.787a.793.793 0 0 1-.58.029zm1.379-1.901c-.166.076-.32.156-.459.238-.328.194-.541.383-.647.547-.094.145-.096.25-.04.361.01.022.02.036.026.044a.266.266 0 0 0 .035-.012c.137-.056.355-.235.635-.572a8.18 8.18 0 0 0 .45-.606zm1.64-1.33a12.71 12.71 0 0 1 1.01-.193 11.744 11.744 0 0 1-.51-.858 20.801 20.801 0 0 1-.5 1.05zm2.446.45c.15.163.296.3.435.41.24.19.407.253.498.256a.107.107 0 0 0 .07-.015.307.307 0 0 0 .094-.125.436.436 0 0 0 .059-.2.095.095 0 0 0-.026-.063c-.052-.062-.2-.152-.518-.209a3.876 3.876 0 0 0-.612-.053zM8.078 7.8a6.7 6.7 0 0 0 .2-.828c.031-.188.043-.343.038-.465a.613.613 0 0 0-.032-.198.517.517 0 0 0-.145.04c-.087.035-.158.106-.196.283-.04.192-.03.469.046.822.024.111.054.227.09.346z"/>
+                        </svg>
+                        Download as PDF
+                    </button>
+                </form>
+            </div>
+            <h3>Analysis Report</h3>
+            <div class="markdown-body" id="reportContent"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('analysisForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                alert('Please enter some text to analyze.');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('analysisResult');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const reportContent = document.getElementById('reportContent');
+            
+            // Show loading spinner
+            loadingSpinner.style.display = 'block';
+            resultDiv.style.display = 'none';
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('text', text);
+            
+            // Send request to server
+            fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingSpinner.style.display = 'none';
+                
+                if (data.error) {
+                    reportContent.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                } else {
+                    // Display the HTML content properly formatted
+                    reportContent.innerHTML = data.html_content;
+                    
+                    // Store HTML content for PDF download
+                    document.getElementById('htmlContent').value = data.html_content;
+                }
+                
+                resultDiv.style.display = 'block';
+            })
+            .catch(error => {
+                loadingSpinner.style.display = 'none';
+                reportContent.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                resultDiv.style.display = 'block';
+            });
+        });
+    </script>
+</body>
+</html>
