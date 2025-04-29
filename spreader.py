@@ -9,6 +9,7 @@ st.set_page_config(page_title="Period even spread dis", layout="wide")
 
 st.title("Period even spread dis")
 st.write("Thinking : https://drive.google.com/file/d/1dgIcYXi2eigJurvcrTRKxoJ6PeL1JjzV/view?usp=drivesdk")
+st.write("Code : https://github.com/404reese/timelith-agent/blob/main/spreader.py")
 
 # Sidebar for inputs
 with st.sidebar:
