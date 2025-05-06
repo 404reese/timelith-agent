@@ -1,10 +1,11 @@
-# app.py
 from flask import Flask, render_template, request, jsonify, make_response
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 import markdown
 import pdfkit
+import uuid
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
@@ -19,16 +20,21 @@ def configure_genai():
     genai.configure(api_key=api_key)
     return True
 
-# Initialize the  model
-def get_gemini_response(text_prompt):
+# Initialize the Gemini model
+def get_schedule_evaluation(schedule_data):
     model = genai.GenerativeModel('gemini-2.0-flash-exp')
+    
+    # Generate a unique ID for the report
+    report_id = str(uuid.uuid4())
+    # Get current date and time
+    current_datetime = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     
     prompt = f"""
     Analyze the following schedule data and generate a schedule evaluation report in this exact format:
 
     SCHEDULE EVALUATION REPORT 
-    Generation: 
-    Date/Time: 
+    Generation: #{report_id} 
+    Date/Time: {current_datetime} 
     CRITICAL ISSUES 
     [Identify any critical scheduling issues that require immediate attention]
     
@@ -51,7 +57,7 @@ def get_gemini_response(text_prompt):
     • [List recommended next steps as bullet points]
 
     Schedule data to analyze:
-    {text_prompt}
+    {schedule_data}
     """
     
     response = model.generate_content(prompt)
@@ -62,19 +68,19 @@ def index():
     api_configured = configure_genai()
     return render_template('index.html', api_configured=api_configured)
 
-@app.route('/analyze', methods=['POST'])
-def analyze():
+@app.route('/evaluate', methods=['POST'])
+def evaluate():
     if not configure_genai():
         return jsonify({'error': 'Gemini API key not configured'}), 400
     
-    text = request.form.get('text', '')
-    if not text:
-        return jsonify({'error': 'No text provided'}), 400
+    schedule_data = request.form.get('schedule_data', '')
+    if not schedule_data:
+        return jsonify({'error': 'No schedule data provided'}), 400
     
     try:
-        analysis = get_gemini_response(text)
-        html_content = markdown.markdown(analysis)
-        return jsonify({'analysis': analysis, 'html_content': html_content})
+        evaluation = get_schedule_evaluation(schedule_data)
+        html_content = markdown.markdown(evaluation)
+        return jsonify({'evaluation': evaluation, 'html_content': html_content})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -91,7 +97,7 @@ def download_pdf():
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>Text Analysis Report</title>
+            <title>Schedule Evaluation Report</title>
             <style>
                 body {{ font-family: Arial, sans-serif; margin: 20px; }}
                 h1 {{ color: #2c3e50; }}
@@ -100,11 +106,13 @@ def download_pdf():
                 p {{ line-height: 1.6; }}
                 ul, ol {{ margin-left: 20px; }}
                 .container {{ max-width: 800px; margin: 0 auto; }}
+                .critical {{ color: #e74c3c; font-weight: bold; }}
+                .status-unacceptable {{ color: #e74c3c; font-weight: bold; }}
+                .status-acceptable {{ color: #27ae60; font-weight: bold; }}
             </style>
         </head>
         <body>
             <div class="container">
-                <h1>Text Analysis Report</h1>
                 {html_content}
             </div>
         </body>
@@ -117,11 +125,19 @@ def download_pdf():
         # Create response with PDF
         response = make_response(pdf)
         response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = 'attachment; filename=text_analysis_report.pdf'
+        response.headers['Content-Disposition'] = 'attachment; filename=schedule_evaluation_report.pdf'
         
         return response
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# New route to take a simple input from the user
+@app.route('/simple-input', methods=['GET', 'POST'])
+def simple_input():
+    if request.method == 'POST':
+        user_input = request.form.get('user_input', '')
+        return f"You entered: {user_input}"
+    return render_template('simple_input.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
